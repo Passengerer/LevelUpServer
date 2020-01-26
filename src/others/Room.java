@@ -41,29 +41,45 @@ public class Room {
 			Log.d(TAG, id + " add. count: " + count);
 			
 			if (count == 4) {
+				startListenning();
 				sendEachClient("ready");
 				play();
 			}
 		}
 	}
 
-	public void play() {
+	protected void play() {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
 				Log.d(TAG, "play");
-				while (!sockets[0].isClosed()) {
+				//while (!sockets[0].isClosed()) {
 					cards.shuffle();
 					deal();
-				}
+				//}
 			}
 		}).start();
 	}
 	
-	public void deal() {
+	protected void deal() {
 		for (int i = 0; i < 4; ++i) {
-			
+			for (int j = 0; j < 25; ++j) {
+				try {
+					ooss[i].writeObject(new Message(Message.CARD, 
+						null, cards.cards.get(25 * i + j), 0));
+					
+				}catch (Exception e) {
+					Log.d(TAG, "deal exception");
+					e.printStackTrace();
+				}
+				
+			}
 		}
+	}
+	
+	protected void startListenning() {
+		for (int i = 0; i < 4; ++i)
+			new Thread(new ListenThread(id, i, oiss[i])).start();
 	}
 	
 	protected void sendEachClient(String msg) {
