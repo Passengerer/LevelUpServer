@@ -5,7 +5,7 @@ import java.util.Random;
 
 public class Cards {
 
-	public List<Card> cards;
+	private List<Card> cards;
 	
 	public Cards() {
 		cards = new ArrayList<Card>();
@@ -31,6 +31,22 @@ public class Cards {
 			cards.remove(index);
 		}
 		cards = newCards.cards;
+	}
+	
+	public List<Card> getCards(){
+		return cards;
+	}
+	
+	public boolean add(Card card) {
+		return cards.add(card);
+	}
+	
+	public boolean remove(Card card) {
+		return cards.remove(card);
+	}
+	
+	public Card get(int index) {
+		return cards.get(index);
 	}
 	
 	public void printAll() {

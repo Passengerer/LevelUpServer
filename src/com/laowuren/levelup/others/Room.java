@@ -1,10 +1,7 @@
 package com.laowuren.levelup.others;
 
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 
 public class Room {
@@ -13,7 +10,7 @@ public class Room {
 
 	private int id;
 	private Socket[] sockets;
-	private int count;
+	public int count;
 
 	private Cards cards;
 	
@@ -49,7 +46,7 @@ public class Room {
 			if (count == 4) {
 				//startListenning();
 				sendEachClient("ready");
-				//play();
+				play();
 			}
 		}
 	}
@@ -61,6 +58,11 @@ public class Room {
 				Log.d(TAG, "play");
 				//while (!sockets[0].isClosed()) {
 					cards.shuffle();
+					try {
+						Thread.sleep(5000);
+					}catch (Exception e) {
+						e.printStackTrace();
+					}
 					deal();
 				//}
 			}
@@ -72,7 +74,7 @@ public class Room {
 			for (int j = 0; j < 25; ++j) {
 				try {
 					ooss[i].writeObject(new MyMessage(MyMessage.CARD, 
-						null, cards.cards.get(25 * i + j), 0));
+						null, cards.get(25 * i + j), 0));
 					ooss[i].flush();
 					
 				}catch (Exception e) {

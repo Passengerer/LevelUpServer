@@ -43,18 +43,17 @@ public class ServerThread extends Thread {
 			acceptStr = null;
 
 			try {
-				MyMessage message = (MyMessage)ois.readObject();
+				MyMessage message = (MyMessage) ois.readObject();
 				if (message.getWhat() == MyMessage.TEXT) {
 					acceptStr = message.getText();
 					Log.d(TAG, "accept: " + acceptStr);
 				}
-			}catch (Exception e) {
+			} catch (Exception e) {
 				Log.d(TAG, "read exception");
 				e.printStackTrace();
 				try {
 					socket.close();
-				}
-				catch (Exception ex) {
+				} catch (Exception ex) {
 					Log.d(TAG, "close socket");
 					ex.printStackTrace();
 				}
@@ -77,7 +76,7 @@ public class ServerThread extends Thread {
 				try {
 					oos.writeObject(new MyMessage(MyMessage.TEXT, "full", null, 0));
 					oos.flush();
-					
+
 					Thread.sleep(1000);
 					if (ois != null)
 						ois.close();
@@ -104,7 +103,7 @@ public class ServerThread extends Thread {
 			try {
 				oos.writeObject(new MyMessage(MyMessage.TEXT, "" + roomId, null, 0));
 				oos.flush();
-				
+
 				Thread.sleep(1000);
 				flag = false;
 			} catch (Exception e) {
@@ -119,13 +118,25 @@ public class ServerThread extends Thread {
 			}
 
 			if (GameServer.Rooms.containsKey(id)) {
-				GameServer.Rooms.get(id).addSocket(socket, ois, oos);
+				try {
+					if (GameServer.Rooms.get(id).count < 4) {
+						oos.writeObject(new MyMessage(MyMessage.TEXT, "success", null, 0));
+						oos.flush();
+						GameServer.Rooms.get(id).addSocket(socket, ois, oos);
+					} else {
+						oos.writeObject(new MyMessage(MyMessage.TEXT, "full", null, 0));
+						oos.flush();
+					}
+					Thread.sleep(1000);
+				} catch (Exception e) {
+					Log.d(TAG, "full ex");
+				}
 				flag = false;
 			} else {
 				try {
 					oos.writeObject(new MyMessage(MyMessage.TEXT, "input error", null, 0));
 					oos.flush();
-					
+
 					Thread.sleep(1000);
 					if (ois != null)
 						ois.close();
