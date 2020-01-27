@@ -4,8 +4,9 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Vector;
 
-import others.Log;
-import others.Room;
+import com.laowuren.levelup.others.Log;
+import com.laowuren.levelup.others.Room;
+
 import server.ServerThread;
 
 public class GameServer {

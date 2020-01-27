@@ -1,4 +1,4 @@
-package others;
+package com.laowuren.levelup.others;
 
 import java.io.ObjectInputStream;
 
@@ -20,10 +20,11 @@ public class ListenThread extends Thread {
 	public void run() {
 		while (ois != null) {
 			try {
-				Message message = (Message)ois.readObject();
+				MyMessage message = (MyMessage)ois.readObject();
 				
 			}catch (Exception e) {
-				Log.d(TAG, roomId + " " + playerId);
+				Log.d(TAG, "room:" + roomId + " player:" + playerId + "exception");
+				e.printStackTrace();
 			}
 			
 		}

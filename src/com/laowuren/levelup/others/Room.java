@@ -1,4 +1,4 @@
-package others;
+package com.laowuren.levelup.others;
 
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -39,11 +39,17 @@ public class Room {
 			oiss[count] = ois;
 			ooss[count++] = oos;
 			Log.d(TAG, id + " add. count: " + count);
+			try {
+				ooss[0].writeObject(new MyMessage(MyMessage.TEXT, "player" + count, null, 0));
+				ooss[0].flush();
+			}catch (Exception e) {
+				Log.d(TAG, "write add");
+			}
 			
 			if (count == 4) {
-				startListenning();
+				//startListenning();
 				sendEachClient("ready");
-				play();
+				//play();
 			}
 		}
 	}
@@ -65,8 +71,9 @@ public class Room {
 		for (int i = 0; i < 4; ++i) {
 			for (int j = 0; j < 25; ++j) {
 				try {
-					ooss[i].writeObject(new Message(Message.CARD, 
+					ooss[i].writeObject(new MyMessage(MyMessage.CARD, 
 						null, cards.cards.get(25 * i + j), 0));
+					ooss[i].flush();
 					
 				}catch (Exception e) {
 					Log.d(TAG, "deal exception");
@@ -85,7 +92,8 @@ public class Room {
 	protected void sendEachClient(String msg) {
 		for (int i = 0; i < 4; ++i) {
 			try {
-				ooss[i].writeObject(new Message(Message.TEXT, msg, null, 0));
+				ooss[i].writeObject(new MyMessage(MyMessage.TEXT, msg, null, 0));
+				ooss[i].flush();
 			}catch (Exception e) {
 				Log.d(TAG, "write obj exception");
 			}

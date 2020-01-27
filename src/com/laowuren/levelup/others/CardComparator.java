@@ -1,4 +1,4 @@
-package others;
+package com.laowuren.levelup.others;
 
 import java.util.Comparator;
 

@@ -5,10 +5,11 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Random;
 
+import com.laowuren.levelup.others.Log;
+import com.laowuren.levelup.others.MyMessage;
+import com.laowuren.levelup.others.Room;
+
 import main.GameServer;
-import others.Log;
-import others.Message;
-import others.Room;
 
 public class ServerThread extends Thread {
 
@@ -42,14 +43,21 @@ public class ServerThread extends Thread {
 			acceptStr = null;
 
 			try {
-				Message message = (Message)ois.readObject();
-				if (message.getWhat() == Message.TEXT) {
+				MyMessage message = (MyMessage)ois.readObject();
+				if (message.getWhat() == MyMessage.TEXT) {
 					acceptStr = message.getText();
 					Log.d(TAG, "accept: " + acceptStr);
 				}
 			}catch (Exception e) {
 				Log.d(TAG, "read exception");
 				e.printStackTrace();
+				try {
+					socket.close();
+				}
+				catch (Exception ex) {
+					Log.d(TAG, "close socket");
+					ex.printStackTrace();
+				}
 			}
 
 			if (acceptStr != null) {
@@ -67,7 +75,7 @@ public class ServerThread extends Thread {
 			if (GameServer.Rooms.size() >= GameServer.ROOMAMOUNT) {
 				Log.d(TAG, ">= room amount");
 				try {
-					oos.writeObject(new Message(Message.TEXT, "full", null, 0));
+					oos.writeObject(new MyMessage(MyMessage.TEXT, "full", null, 0));
 					oos.flush();
 					
 					Thread.sleep(1000);
@@ -94,7 +102,7 @@ public class ServerThread extends Thread {
 			GameServer.Rooms.put(roomId, room);
 
 			try {
-				oos.writeObject(new Message(Message.TEXT, "" + roomId, null, 0));
+				oos.writeObject(new MyMessage(MyMessage.TEXT, "" + roomId, null, 0));
 				oos.flush();
 				
 				Thread.sleep(1000);
@@ -115,7 +123,7 @@ public class ServerThread extends Thread {
 				flag = false;
 			} else {
 				try {
-					oos.writeObject(new Message(Message.TEXT, "input error", null, 0));
+					oos.writeObject(new MyMessage(MyMessage.TEXT, "input error", null, 0));
 					oos.flush();
 					
 					Thread.sleep(1000);

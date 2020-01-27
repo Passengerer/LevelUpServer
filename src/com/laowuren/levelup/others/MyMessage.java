@@ -1,8 +1,8 @@
-package others;
+package com.laowuren.levelup.others;
 
 import java.io.Serializable;
 
-public class Message implements Serializable {
+public class MyMessage implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	
@@ -15,7 +15,7 @@ public class Message implements Serializable {
 	private Card card;
 	private int score;
 	
-	public Message(int what, String text, Card card, int score) {
+	public MyMessage(int what, String text, Card card, int score) {
 		this.what = what;
 		this.text = text;
 		this.card = card;
