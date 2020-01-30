@@ -1,6 +1,6 @@
 package com.laowuren.levelup.others;
 
-import java.io.ObjectInputStream;
+import java.io.InputStream;
 
 public class ListenThread extends Thread {
 	
@@ -8,25 +8,27 @@ public class ListenThread extends Thread {
 	
 	private int roomId;
 	private int playerId;
-	private ObjectInputStream ois;
+	private InputStream in;
 	
-	public ListenThread(int roomId, int playerId, ObjectInputStream ois) {
+	public ListenThread(int roomId, int playerId, InputStream in) {
 		this.roomId = roomId;
 		this.playerId = playerId;
-		this.ois = ois;
+		this.in = in;
 	}
 	
 	@Override
 	public void run() {
-		while (ois != null) {
+		
+		while (in != null) {
+
+			byte b;
 			try {
-				MyMessage message = (MyMessage)ois.readObject();
-				
-			}catch (Exception e) {
-				Log.d(TAG, "room:" + roomId + " player:" + playerId + "exception");
+				if ((b = (byte)in.read()) != -1) {
+					Log.d(TAG, "code " + (int)b);
+				}
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			
 		}
 	}
 

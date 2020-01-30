@@ -1,8 +1,10 @@
 package com.laowuren.levelup.others;
 
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
+
+import utils.CodeUtil;
 
 public class Room {
 
@@ -12,40 +14,34 @@ public class Room {
 	private Socket[] sockets;
 	public int count;
 
-	private Cards cards;
-	
-	private ObjectInputStream[] oiss;
-	private ObjectOutputStream[] ooss;
+	private Deck deck;
 
-	public Room(int id, Socket socket, ObjectInputStream ois, ObjectOutputStream oos) {
+	private InputStream[] ins;
+	private OutputStream[] outs;
+
+	public Room(int id, Socket socket, InputStream in, OutputStream out) {
 		Log.d(TAG, id + " init");
 		this.id = id;
 		sockets = new Socket[4];
-		oiss = new ObjectInputStream[4];
-		ooss = new ObjectOutputStream[4];
+		ins = new InputStream[4];
+		outs = new OutputStream[4];
 		sockets[0] = socket;
-		oiss[0] = ois;
-		ooss[0] = oos;
+		ins[0] = in;
+		outs[0] = out;
 		count = 1;
-		cards = new Cards(new Deck().getDeck(), new Deck().getDeck());
+		deck = new Deck();
 	}
 
-	public void addSocket(Socket socket, ObjectInputStream ois, ObjectOutputStream oos) {
+	public void addSocket(Socket socket, InputStream in, OutputStream out) {
 		if (count < 4) {
 			sockets[count] = socket;
-			oiss[count] = ois;
-			ooss[count++] = oos;
+			ins[count] = in;
+			outs[count++] = out;
 			Log.d(TAG, id + " add. count: " + count);
-			try {
-				ooss[0].writeObject(new MyMessage(MyMessage.TEXT, "player" + count, null, 0));
-				ooss[0].flush();
-			}catch (Exception e) {
-				Log.d(TAG, "write add");
-			}
-			
+
 			if (count == 4) {
-				//startListenning();
-				sendEachClient("ready");
+				startListenning();
+				sendEachClient(CodeUtil.READY);
 				play();
 			}
 		}
@@ -56,48 +52,47 @@ public class Room {
 			@Override
 			public void run() {
 				Log.d(TAG, "play");
-				//while (!sockets[0].isClosed()) {
-					cards.shuffle();
-					try {
-						Thread.sleep(5000);
-					}catch (Exception e) {
-						e.printStackTrace();
-					}
-					deal();
-				//}
+				// while (!sockets[0].isClosed()) {
+				deck.shuffle();
+				deck.printAll();
+				try {
+					Thread.sleep(3000);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				deal();
+				// }
 			}
 		}).start();
 	}
-	
+
 	protected void deal() {
-		for (int i = 0; i < 4; ++i) {
-			for (int j = 0; j < 25; ++j) {
-				try {
-					ooss[i].writeObject(new MyMessage(MyMessage.CARD, 
-						null, cards.get(25 * i + j), 0));
-					ooss[i].flush();
-					
-				}catch (Exception e) {
-					Log.d(TAG, "deal exception");
-					e.printStackTrace();
+		try {
+			for (int i = 0; i < 25; ++i) {
+				for (int j = 0; j < 4; ++j) {
+					outs[j].write(deck.get(i * 4 + j));
+					outs[j].flush();
 				}
-				
+				Thread.sleep(500);
 			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
-	
+
 	protected void startListenning() {
-		for (int i = 0; i < 4; ++i)
-			new Thread(new ListenThread(id, i, oiss[i])).start();
+		// for (int i = 0; i < 4; ++i)
+		 new Thread(new ListenThread(id, 0, ins[0])).start();
 	}
-	
-	protected void sendEachClient(String msg) {
+
+	protected void sendEachClient(byte instruct) {
 		for (int i = 0; i < 4; ++i) {
 			try {
-				ooss[i].writeObject(new MyMessage(MyMessage.TEXT, msg, null, 0));
-				ooss[i].flush();
-			}catch (Exception e) {
-				Log.d(TAG, "write obj exception");
+				outs[i].write(instruct);
+				;
+				outs[i].flush();
+			} catch (Exception e) {
+				Log.d(TAG, "write msg exception");
 			}
 		}
 	}

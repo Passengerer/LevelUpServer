@@ -49,6 +49,10 @@ public class Cards {
 		return cards.get(index);
 	}
 	
+	public int size() {
+		return cards.size();
+	}
+	
 	public void printAll() {
 		for (Card c : cards) {
 			System.out.println(c);

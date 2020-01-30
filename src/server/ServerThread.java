@@ -1,13 +1,13 @@
 package server;
 
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Random;
 
 import com.laowuren.levelup.others.Log;
-import com.laowuren.levelup.others.MyMessage;
 import com.laowuren.levelup.others.Room;
+import utils.CodeUtil;
 
 import main.GameServer;
 
@@ -16,8 +16,8 @@ public class ServerThread extends Thread {
 	private final static String TAG = "ServerThread";
 
 	private Socket socket;
-	private ObjectInputStream ois = null;
-	private ObjectOutputStream oos = null;
+	private InputStream in = null;
+	private OutputStream out = null;
 
 	private boolean flag = true;
 
@@ -29,61 +29,38 @@ public class ServerThread extends Thread {
 	public void run() {
 
 		try {
-			ois = new ObjectInputStream(socket.getInputStream());
-			oos = new ObjectOutputStream(socket.getOutputStream());
+			in = socket.getInputStream();
+			out = socket.getOutputStream();
 		} catch (Exception e) {
 			Log.d(TAG, "io exception");
 			e.printStackTrace();
 		}
 
-		String acceptStr = null;
-
 		while (flag && !socket.isClosed()) {
 
-			acceptStr = null;
-
+			byte b;
 			try {
-				MyMessage message = (MyMessage) ois.readObject();
-				if (message.getWhat() == MyMessage.TEXT) {
-					acceptStr = message.getText();
-					Log.d(TAG, "accept: " + acceptStr);
+				if ((b = (byte)in.read()) != -1) {
+					Log.d(TAG, "code " + (int)b);
+					handle(b);
 				}
 			} catch (Exception e) {
-				Log.d(TAG, "read exception");
 				e.printStackTrace();
-				try {
-					socket.close();
-				} catch (Exception ex) {
-					Log.d(TAG, "close socket");
-					ex.printStackTrace();
-				}
-			}
-
-			if (acceptStr != null) {
-				handleMessage(acceptStr);
 			}
 		}
 		Log.d(TAG, "thread over");
 	}
 
-	protected void handleMessage(String message) {
+	protected void handle(byte instruct) {
 		Log.d(TAG, "handle");
 
-		if ("create room".equalsIgnoreCase(message)) {
+		if (instruct == CodeUtil.CREATE) {
 
 			if (GameServer.Rooms.size() >= GameServer.ROOMAMOUNT) {
 				Log.d(TAG, ">= room amount");
 				try {
-					oos.writeObject(new MyMessage(MyMessage.TEXT, "full", null, 0));
-					oos.flush();
-
-					Thread.sleep(1000);
-					if (ois != null)
-						ois.close();
-					if (oos != null)
-						oos.close();
-					if (!socket.isClosed())
-						socket.close();
+					out.write(CodeUtil.FAILED1);
+					out.flush();
 				} catch (Exception e) {
 					Log.d(TAG, "ex 0");
 				}
@@ -97,12 +74,12 @@ public class ServerThread extends Thread {
 				roomId = random.nextInt(GameServer.ROOMAMOUNT);
 			} while (GameServer.Rooms.containsKey(roomId));
 
-			Room room = new Room(roomId, socket, ois, oos);
+			Room room = new Room(roomId, socket, in, out);
 			GameServer.Rooms.put(roomId, room);
 
 			try {
-				oos.writeObject(new MyMessage(MyMessage.TEXT, "" + roomId, null, 0));
-				oos.flush();
+				out.write(CodeUtil.ROOMID | roomId);
+				out.flush();
 
 				Thread.sleep(1000);
 				flag = false;
@@ -110,22 +87,19 @@ public class ServerThread extends Thread {
 				Log.d(TAG, "ex 1");
 			}
 
-		} else {
-			int id = -1;
-			try {
-				id = Integer.parseInt(message);
-			} catch (Exception e) {
-			}
+		} else if (CodeUtil.getHeader(instruct) == CodeUtil.ROOMID) {
+			
+			int id = CodeUtil.getTail(instruct);
 
 			if (GameServer.Rooms.containsKey(id)) {
 				try {
 					if (GameServer.Rooms.get(id).count < 4) {
-						oos.writeObject(new MyMessage(MyMessage.TEXT, "success", null, 0));
-						oos.flush();
-						GameServer.Rooms.get(id).addSocket(socket, ois, oos);
+						out.write(CodeUtil.SUCCESS);
+						out.flush();
+						GameServer.Rooms.get(id).addSocket(socket, in, out);
 					} else {
-						oos.writeObject(new MyMessage(MyMessage.TEXT, "full", null, 0));
-						oos.flush();
+						out.write(CodeUtil.FAILED2);
+						out.flush();
 					}
 					Thread.sleep(1000);
 				} catch (Exception e) {
@@ -134,16 +108,10 @@ public class ServerThread extends Thread {
 				flag = false;
 			} else {
 				try {
-					oos.writeObject(new MyMessage(MyMessage.TEXT, "input error", null, 0));
-					oos.flush();
+					out.write(CodeUtil.FAILED3);
+					out.flush();
 
 					Thread.sleep(1000);
-					if (ois != null)
-						ois.close();
-					if (oos != null)
-						oos.close();
-					if (!socket.isClosed())
-						socket.close();
 				} catch (Exception e) {
 					Log.d(TAG, "ex 2");
 				}

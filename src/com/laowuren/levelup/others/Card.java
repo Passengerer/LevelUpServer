@@ -11,6 +11,7 @@ public class Card implements Serializable {
 	
 	private Suit suit;
 	private Rank rank;
+	private int imgId;
 	
 	public Card() {}
 	
@@ -41,6 +42,14 @@ public class Card implements Serializable {
 			return new String(rank.toString());
 		else
 			return new String(suit.toString() + "_" + rank.toString());
+	}
+
+	public int getImgId() {
+		return imgId;
+	}
+
+	public void setImgId(int imgId) {
+		this.imgId = imgId;
 	}
 	
 }
