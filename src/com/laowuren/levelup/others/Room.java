@@ -73,7 +73,7 @@ public class Room {
 					outs[j].write(deck.get(i * 4 + j));
 					outs[j].flush();
 				}
-				Thread.sleep(500);
+				Thread.sleep(700);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

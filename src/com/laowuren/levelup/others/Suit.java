@@ -2,9 +2,9 @@ package com.laowuren.levelup.others;
 
 public enum Suit {
 	
-	Diamond,	// 方块
-	Club,		// 梅花
     Heart,		// 红心
+	Club,		// 梅花
+	Diamond,	// 方块
     Spade;		// 黑桃
     
 	@Override
