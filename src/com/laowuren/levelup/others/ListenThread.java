@@ -2,6 +2,8 @@ package com.laowuren.levelup.others;
 
 import java.io.InputStream;
 
+import main.GameServer;
+
 public class ListenThread extends Thread {
 	
 	private final static String TAG = "ListenThread";
@@ -25,6 +27,7 @@ public class ListenThread extends Thread {
 			try {
 				if ((b = (byte)in.read()) != -1) {
 					Log.d(TAG, "code " + (int)b);
+					GameServer.Rooms.get(roomId).handle(b, playerId);
 				}
 			} catch (Exception e) {
 				e.printStackTrace();

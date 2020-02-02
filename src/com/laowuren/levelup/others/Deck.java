@@ -34,7 +34,7 @@ public class Deck {
 		int index;
 		int amount = deck.size();
 		for (int i = 0; i < amount; ++i) {
-			Random ran = new Random();
+			Random ran = new Random(System.currentTimeMillis());
 			index = ran.nextInt(deck.size());
 			newDeck.add(deck.get(index));
 			deck.remove(index);

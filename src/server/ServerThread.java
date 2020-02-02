@@ -78,7 +78,7 @@ public class ServerThread extends Thread {
 			GameServer.Rooms.put(roomId, room);
 
 			try {
-				out.write(CodeUtil.ROOMID | roomId);
+				out.write(CodeUtil.ROOMID | (byte)(roomId << 2) | (byte)(room.count - 1));
 				out.flush();
 
 				Thread.sleep(1000);
@@ -94,7 +94,7 @@ public class ServerThread extends Thread {
 			if (GameServer.Rooms.containsKey(id)) {
 				try {
 					if (GameServer.Rooms.get(id).count < 4) {
-						out.write(CodeUtil.SUCCESS);
+						out.write(CodeUtil.ROOMID | (byte)(id << 2) | (byte)GameServer.Rooms.get(id).count);
 						out.flush();
 						GameServer.Rooms.get(id).addSocket(socket, in, out);
 					} else {
