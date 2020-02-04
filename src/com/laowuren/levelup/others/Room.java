@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 
+import main.GameServer;
 import utils.CodeUtil;
 
 public class Room {
@@ -14,6 +15,9 @@ public class Room {
 	private int id;
 	private Socket[] sockets;
 	public int count;
+	private static boolean EXIT = false;
+	
+	private Object obj = new Object();
 	
 	private ArrayList<Byte> dipai;
 
@@ -28,6 +32,7 @@ public class Room {
 	private boolean dealing = true;
 	private boolean reDeal = false;	// 是否需要重新发牌
 	private boolean noFan = false;
+	private boolean isMaipai = true;
 	private int zhuangjia = -1;
 	private int turn = -1;
 	private int showSuitPlayer = -1;
@@ -43,20 +48,47 @@ public class Room {
 		outs = new OutputStream[4];
 		sockets[0] = socket;
 		ins[0] = in;
+		new Thread(new ListenThread(id, 0, ins[0])).start();
 		outs[0] = out;
 		count = 1;
 		deck = new Deck();
 		dipai = new ArrayList<>();
 	}
+	
+	protected void destroy() {
+		for (int i = 0; i < 4; ++i) {
+			try {
+				if (!sockets[i].isClosed()) {
+					sockets[i].close();
+				}
+				if (ins[i] != null) {
+					ins[i].close();
+				}
+				if (outs[i] != null) {
+					outs[i].close();
+				}
+			}catch (Exception e) {}
+		}
+	}
 
 	public synchronized void handle(byte code, int playerId) {
+		if (code == CodeUtil.EXIT) {
+			sendEachClient(CodeUtil.EXIT);
+			EXIT = true;
+			destroy();
+			GameServer.Rooms.remove(id);
+			Log.d(TAG, "destroy");
+		}
 		if (!hasSetZhu && CodeUtil.getHeader(code) == CodeUtil.ZHUSUIT) {
-			if (zhuangjia == -1)
+			if (zhuangjia == -1) {
 				zhuangjia = playerId;
+				turn = zhuangjia;
+			}
 			hasSetZhu = true;
 			suit = CodeUtil.getTail(code);
 			showSuitPlayer = playerId;
 			sendEachClient((byte)(CodeUtil.ZHUSUIT | (byte)suit << 2 | (byte)playerId));
+			return;
 		}
 		if (CodeUtil.getHeader(code) == CodeUtil.FANSUIT) {
 			if (playerId == showSuitPlayer) {	// 定牌
@@ -88,25 +120,37 @@ public class Room {
 					return;
 				}else {
 					zhuangjia = playerId;
+					turn = zhuangjia;
 				}
 			}
 			sendEachClient((byte)(CodeUtil.FANSUIT | (byte)suit << 2 | (byte)playerId));
+			return;
 		}
 		if (CodeUtil.getHeader(code) == CodeUtil.BIZHUANG) {
 			noFan = true;
+			return;
 		}
-		turn = zhuangjia;
+		// 收到底牌
+		if (isMaipai) {
+			dipai.add(code);
+			if (dipai.size() == 8) {
+				synchronized (obj) {
+					obj.notify();
+				}
+			}
+		}
 	}
 
 	public void addSocket(Socket socket, InputStream in, OutputStream out) {
 		if (count < 4) {
 			sockets[count] = socket;
 			ins[count] = in;
+			new Thread(new ListenThread(id, count, ins[count])).start();
 			outs[count++] = out;
 			Log.d(TAG, id + " add. count: " + count);
 
 			if (count == 4) {
-				startListenning();
+				//startListenning();
 				sendEachClient(CodeUtil.READY);
 				play();
 			}
@@ -118,8 +162,8 @@ public class Room {
 			@Override
 			public void run() {
 				Log.d(TAG, "play");
-				// while (!sockets[0].isClosed()) {
-				deck.shuffle();
+				// while (!EXIT) {
+				//deck.shuffle();
 				//deck.printAll();
 				try {
 					Thread.sleep(3000);
@@ -149,7 +193,19 @@ public class Room {
 				turn = zhuangjia;
 				Log.d("turn " + turn, "" + (byte)(CodeUtil.STARTTURN | turn));
 				sendEachClient((byte)(CodeUtil.STARTTURN | turn));
-				// }
+				synchronized (obj) {
+					while (!EXIT) {
+						try {
+							obj.wait();
+							turn = (turn + 1) % 4;
+							Log.d("next turn", "" + turn);
+							sendEachClient((byte)(CodeUtil.STARTTURN | turn));
+						}catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				Log.d(TAG, "play thread over");
 			}
 		}).start();
 	}
@@ -167,7 +223,8 @@ public class Room {
 			}
 		}
 		for (int i = 100; i < 108; ++i) {
-			dipai.add(deck.get(i));
+			//dipai.add(deck.get(i));
+			dipai.add((byte)0x00);
 		}
 		try {
 			Thread.sleep(2000);
@@ -180,6 +237,7 @@ public class Room {
 	protected void sendDipaiTo(int i) {
 		for (int j = 0;j < 8; ++j)
 			send(dipai.get(j), i);
+		dipai.clear();
 	}
 
 	protected void startListenning() {

@@ -16,6 +16,7 @@ public class CodeUtil {
     public final static byte FAILED2 = (byte)0xf3;	// 房间人数已满
     public final static byte FAILED3 = (byte)0xf4;	// 错误请求
     public final static byte SUCCESS = (byte)0xf5;	// 请求成功
+    public final static byte EXIT = (byte)0xf6;
     
     public final static byte ROOMID = (byte)0xe0;	// -32 房间id 1110 00 00 后4位中前两位表示房间号，后两位表示玩家id
     public final static byte ZHUSUIT = (byte)0xd0;	//  主牌花色 1101 0000 后4位表示花色，4-小王，5-大王

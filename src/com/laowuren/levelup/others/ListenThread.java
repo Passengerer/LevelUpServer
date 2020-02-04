@@ -3,6 +3,7 @@ package com.laowuren.levelup.others;
 import java.io.InputStream;
 
 import main.GameServer;
+import utils.CodeUtil;
 
 public class ListenThread extends Thread {
 	
@@ -31,6 +32,12 @@ public class ListenThread extends Thread {
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
+				GameServer.Rooms.get(roomId).handle(CodeUtil.EXIT, playerId);
+				try {
+					if (in != null) {
+						in.close();
+					}
+				}catch (Exception ex) {}
 			}
 		}
 	}
