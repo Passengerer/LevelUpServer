@@ -13,7 +13,7 @@ public enum Rank {
 	Jack,
 	Queen,
 	King,
-	Ace,
+	Ace,	// 11
 	Deuce,
 	Joker_black,	// 13
 	Joker_red;	// 14

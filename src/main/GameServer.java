@@ -12,7 +12,7 @@ import server.ServerThread;
 public class GameServer {
 
 	private final static String TAG = "GameServer";
-	private final static int PORT = 9990;
+	private final static int PORT = 9798;
 	private static ServerSocket serverSocket = null;
 	public static int ROOMAMOUNT = 3;
 	

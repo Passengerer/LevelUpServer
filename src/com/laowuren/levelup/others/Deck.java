@@ -1,6 +1,7 @@
 package com.laowuren.levelup.others;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -30,16 +31,17 @@ public class Deck {
 	}
 	
 	public void shuffle() {
-		List<Byte> newDeck = new ArrayList<>();
+		/*List<Byte> newDeck = new ArrayList<>();
 		int index;
 		int amount = deck.size();
+		Random ran = new Random();
 		for (int i = 0; i < amount; ++i) {
-			Random ran = new Random(System.currentTimeMillis());
 			index = ran.nextInt(deck.size());
 			newDeck.add(deck.get(index));
 			deck.remove(index);
 		}
-		deck = newDeck;
+		deck = newDeck;*/
+		Collections.shuffle(deck);
 	}
 	
 	public void printAll() {

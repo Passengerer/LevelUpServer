@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 import main.GameServer;
 import utils.CodeUtil;
@@ -16,26 +17,35 @@ public class Room {
 	private Socket[] sockets;
 	public int count;
 	private static boolean EXIT = false;
-	
-	private Object obj = new Object();
-	
+	private GAMESTATE stat = GAMESTATE.DEAL;
+	private CardComparator cardComparator = new CardComparator();
+	private CodeComparator codeComparator = new CodeComparator();
+
+	private Object bizhuangLock = new Object();
+	private Object maipaiLock = new Object();
+	private Object playLock = new Object();
+	private boolean canNotify = false;
+
 	private ArrayList<Byte> dipai;
+	private ArrayList<Byte>[] playCards;
 
 	private Deck deck;
-	private byte rank0_2 = 0x00;
-	private byte rank1_3 = 0x00;
+	private byte[] ranks;
 	private byte suit = 0x10;
+	private Card zhuCard;
 	private boolean hasSetZhu = false;
 	private boolean hasDing = false;
 	private boolean hasFanWang = false;
 	private boolean isFirstGame = true;
-	private boolean dealing = true;
-	private boolean reDeal = false;	// 是否需要重新发牌
+	private boolean reDeal = false; // 是否需要重新发牌
 	private boolean noFan = false;
-	private boolean isMaipai = true;
+	private boolean isBizhuang = false;
+	private int maipairenID;
 	private int zhuangjia = -1;
 	private int turn = -1;
 	private int showSuitPlayer = -1;
+	private int bufanCount = 0;
+	private int playCardsCount;
 
 	private InputStream[] ins;
 	private OutputStream[] outs;
@@ -52,9 +62,13 @@ public class Room {
 		outs[0] = out;
 		count = 1;
 		deck = new Deck();
+		deck.shuffle();
 		dipai = new ArrayList<>();
+		ranks = new byte[2];
+		ranks[0] = 0x00;
+		ranks[1] = 0x00;
 	}
-	
+
 	protected void destroy() {
 		for (int i = 0; i < 4; ++i) {
 			try {
@@ -67,46 +81,73 @@ public class Room {
 				if (outs[i] != null) {
 					outs[i].close();
 				}
-			}catch (Exception e) {}
+			} catch (Exception e) {
+			}
 		}
 	}
 
 	public synchronized void handle(byte code, int playerId) {
 		if (code == CodeUtil.EXIT) {
-			sendEachClient(CodeUtil.EXIT);
 			EXIT = true;
+			sendEachClient(CodeUtil.EXIT);
 			destroy();
 			GameServer.Rooms.remove(id);
-			Log.d(TAG, "destroy");
+			Log.d(TAG + " " + id, "destroy");
+			return;
 		}
-		if (!hasSetZhu && CodeUtil.getHeader(code) == CodeUtil.ZHUSUIT) {
-			if (zhuangjia == -1) {
+		if (stat != GAMESTATE.PLAY && CodeUtil.getHeader(code) == CodeUtil.BIZHUANG) {
+			noFan = true;
+			synchronized (bizhuangLock) {
+				bizhuangLock.notify();
+			}
+			return;
+		}
+		if (stat != GAMESTATE.PLAY && CodeUtil.getHeader(code) == CodeUtil.ZHUSUIT) {
+			if (hasSetZhu)
+				return;
+			if (isBizhuang) {
+				isBizhuang = false;
+				noFan = false;
+				synchronized (bizhuangLock) {
+					bizhuangLock.notify();
+				}
+			}
+			if (isFirstGame) {
 				zhuangjia = playerId;
 				turn = zhuangjia;
 			}
 			hasSetZhu = true;
 			suit = CodeUtil.getTail(code);
+			Log.d("zhusuit", "" + suit);
 			showSuitPlayer = playerId;
-			sendEachClient((byte)(CodeUtil.ZHUSUIT | (byte)suit << 2 | (byte)playerId));
+			sendEachClient((byte) (CodeUtil.ZHUSUIT | (byte) suit << 2 | (byte) playerId));
 			return;
 		}
-		if (CodeUtil.getHeader(code) == CodeUtil.FANSUIT) {
-			if (playerId == showSuitPlayer) {	// 定牌
+		if (stat != GAMESTATE.PLAY && CodeUtil.getHeader(code) == CodeUtil.FANSUIT) {
+			if (playerId == showSuitPlayer) { // 定牌
 				hasDing = true;
-				sendEachClient((byte)(CodeUtil.DINGSUIT | (byte)suit << 2 | (byte)playerId));
+				sendEachClient((byte) (CodeUtil.DINGSUIT | (byte) suit << 2 | (byte) playerId));
 				return;
 			}
 			if (CodeUtil.getTail(code) == 4 || CodeUtil.getTail(code) == 5) {
+				if (isFirstGame && stat == GAMESTATE.DEAL)
+					return;
 				hasFanWang = true;
 				if (CodeUtil.getTail(code) <= suit)
 					return;
 				if (CodeUtil.getTail(code) == 4) {
 					suit = 0x04;
-					sendEachClient((byte)(CodeUtil.FANWANG | (byte)0x00 << 2 | (byte)playerId));
-				}
-				else {
+					showSuitPlayer = playerId;
+					sendEachClient((byte) (CodeUtil.FANWANG | (byte) 0x00 << 2 | (byte) playerId));
+				} else {
 					suit = 0x05;
-					sendEachClient((byte)(CodeUtil.FANWANG | (byte)0x01 << 2 | (byte)playerId));
+					showSuitPlayer = playerId;
+					sendEachClient((byte) (CodeUtil.FANWANG | (byte) 0x01 << 2 | (byte) playerId));
+				}
+				if (stat == GAMESTATE.MAIPAI) {
+					maipairenID = playerId;
+					sendEachClient((byte) (CodeUtil.MAIPAITURN | (maipairenID << 2 | turn)));
+					sendDipaiTo(playerId);
 				}
 				return;
 			}
@@ -115,28 +156,52 @@ public class Room {
 				return;
 			// 第一局抢庄，未捞底牌，仍可以抢，但不能用王抢
 			suit = CodeUtil.getTail(code);
-			if (isFirstGame && dealing) {
-				if (suit == 4 || suit == 5) {
-					return;
-				}else {
-					zhuangjia = playerId;
-					turn = zhuangjia;
+			showSuitPlayer = playerId;
+			if (isFirstGame && stat == GAMESTATE.DEAL) {
+				zhuangjia = playerId;
+				turn = zhuangjia;
+			}
+			sendEachClient((byte) (CodeUtil.FANSUIT | (byte) suit << 2 | (byte) playerId));
+			if (stat == GAMESTATE.MAIPAI) {
+				maipairenID = playerId;
+				sendEachClient((byte) (CodeUtil.MAIPAITURN | (maipairenID << 2 | turn)));
+				sendDipaiTo(playerId);
+			}
+			return;
+		}
+		if (stat == GAMESTATE.PLAY && (code & 0xe0) == 0xe0) {
+			playCardsCount = code & 0x1f;
+			Log.d("playCards", playCardsCount + "");
+			return;
+		}
+		if (stat == GAMESTATE.PLAY) {
+			playCards[playerId].add(code);
+			if (playCards[playerId].size() == playCardsCount) {
+				playCards[playerId].sort(codeComparator);
+				sendEachCards(playCards[playerId]);
+				synchronized (playLock) {
+					playLock.notify();
 				}
 			}
-			sendEachClient((byte)(CodeUtil.FANSUIT | (byte)suit << 2 | (byte)playerId));
-			return;
-		}
-		if (CodeUtil.getHeader(code) == CodeUtil.BIZHUANG) {
-			noFan = true;
-			return;
 		}
 		// 收到底牌
-		if (isMaipai) {
+		if (stat == GAMESTATE.MAIPAI && code != CodeUtil.BUFAN) {
 			dipai.add(code);
 			if (dipai.size() == 8) {
-				synchronized (obj) {
-					obj.notify();
-				}
+				Log.d("receive dipai", dipai.toString());
+				bufanCount = 0;
+				maipairenID = playerId;
+				canNotify = true;
+			}
+		}
+		if (code == CodeUtil.BUFAN) {
+			++bufanCount;
+			canNotify = true;
+		}
+		if (canNotify) {
+			canNotify = false;
+			synchronized (maipaiLock) {
+				maipaiLock.notify();
 			}
 		}
 	}
@@ -150,8 +215,12 @@ public class Room {
 			Log.d(TAG, id + " add. count: " + count);
 
 			if (count == 4) {
-				//startListenning();
 				sendEachClient(CodeUtil.READY);
+				playCards = new ArrayList[4];
+				playCards[0] = new ArrayList<Byte>();
+				playCards[1] = new ArrayList<Byte>();
+				playCards[2] = new ArrayList<Byte>();
+				playCards[3] = new ArrayList<Byte>();
 				play();
 			}
 		}
@@ -161,46 +230,73 @@ public class Room {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				Log.d(TAG, "play");
 				// while (!EXIT) {
-				//deck.shuffle();
-				//deck.printAll();
-				try {
-					Thread.sleep(3000);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-				if (isFirstGame)
+
+				deck.shuffle();
+				if (isFirstGame) {
 					deal(0);
-				else deal(zhuangjia);
-				if (dealing == false && suit == 0x10) {	// 逼庄家亮花色
-					if (zhuangjia != -1) {
-						sendEachClient(CodeUtil.BIZHUANG);
-					}else {	// 重新发牌
-						reDeal = true;
-					}
+				} else {
+					deal(zhuangjia);
 				}
-				while (suit == 0x10 && !reDeal) {	// 还未亮花色，等待
-					if (noFan) {
+				sendEachClient(CodeUtil.SUCCESS);
+				if (!hasSetZhu) {
+					if (!isFirstGame) {
+						isBizhuang = true;
+						sendEachClient((byte)(CodeUtil.BIZHUANG | zhuangjia));
+						synchronized (bizhuangLock) {
+							try {
+								bizhuangLock.wait();
+								if (noFan) {
+									reDeal = true;
+								}else {
+									reDeal = false;
+								}
+							}catch (Exception e) {e.printStackTrace();}
+						}
+					}else {
 						reDeal = true;
 					}
 				}
 				if (reDeal) {
+					Log.d("redeal", "redeal");
 					//continue;
 				}
-				sendDipaiTo(zhuangjia);
-				// 开始轮流说话
+				// 开始轮流埋牌
 				turn = zhuangjia;
-				Log.d("turn " + turn, "" + (byte)(CodeUtil.STARTTURN | turn));
-				sendEachClient((byte)(CodeUtil.STARTTURN | turn));
-				synchronized (obj) {
+				maipairenID = zhuangjia;
+				Log.d("turn " + turn, "" + (byte) (CodeUtil.MAIPAITURN | (maipairenID << 2 | turn)));
+				sendEachClient((byte) (CodeUtil.MAIPAITURN | (maipairenID << 2 | turn)));
+				stat = GAMESTATE.MAIPAI;
+				sendDipaiTo(zhuangjia);
+				synchronized (maipaiLock) {
 					while (!EXIT) {
 						try {
-							obj.wait();
+							maipaiLock.wait();
+							Log.d("bufan", "" + bufanCount);
+							if (bufanCount == 3) {
+								break;
+							}
+							turn = (turn + 1) % 4;
+							sendEachClient((byte) (CodeUtil.MAIPAITURN | (maipairenID << 2 | turn)));
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				setZhuCardAndComparator();
+				// 开始轮流打牌
+				turn = zhuangjia;
+				sendEachClient((byte)(CodeUtil.FIRSTPLAY | turn));
+				sendEachClient((byte) (CodeUtil.PLAYTURN | turn));
+				stat = GAMESTATE.PLAY;
+				synchronized (playLock) {
+					while (!EXIT) {
+						try {
+							playLock.wait();
 							turn = (turn + 1) % 4;
 							Log.d("next turn", "" + turn);
-							sendEachClient((byte)(CodeUtil.STARTTURN | turn));
-						}catch (Exception e) {
+							sendEachClient((byte) (CodeUtil.PLAYTURN | turn));
+						} catch (Exception e) {
 							e.printStackTrace();
 						}
 					}
@@ -211,38 +307,72 @@ public class Room {
 	}
 
 	protected void deal(int first) {
-		for (int i = 0; i < 25; ++i) {
-			
-			for (int j = 0; j < 4; ++j)
-				send(deck.get(i * 4 + j), (j + first) % 4);
-			
-			try {
-				Thread.sleep(700);
-			} catch (Exception e) {
-				e.printStackTrace();
+		try {
+			Thread.sleep(2500);
+			for (int i = 0; i < 25; ++i) {
+
+				for (int j = 0; j < 4; ++j) {
+					send(deck.get(i * 4 + j), (j + first) % 4);
+					/*if (i < 2)
+						send((byte)0x00, j);
+					else if(i < 4)
+						send((byte)0x10, j);
+					else if (i < 6)
+						send((byte)0x20, j);
+					else {
+						send(deck.get(i * 4 + j), (j + first) % 4);
+					}*/
+				}
+				Thread.sleep(600);
 			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		for (int i = 100; i < 108; ++i) {
-			//dipai.add(deck.get(i));
-			dipai.add((byte)0x00);
+			dipai.add(deck.get(i));
 		}
 		try {
 			Thread.sleep(2000);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		dealing = false;
 	}
 	
-	protected void sendDipaiTo(int i) {
-		for (int j = 0;j < 8; ++j)
-			send(dipai.get(j), i);
-		dipai.clear();
+	protected void setZhuCardAndComparator() {
+		Suit s = null;
+		if (suit > 3) {
+			s = null;
+		}else {
+			s = Suit.values()[suit];
+		}
+		Rank r = Rank.values()[ranks[zhuangjia % 2]];
+		zhuCard = new Card(s, r);
+		cardComparator.setZhu(zhuCard);
+		codeComparator.setCardComparator(cardComparator);
 	}
 
-	protected void startListenning() {
-		for (int i = 0; i < 4; ++i)
-			new Thread(new ListenThread(id, i, ins[i])).start();
+	protected void sendDipaiTo(int i) {
+        Log.d("send dipai", dipai.toString());
+		for (int j = 0; j < 8; ++j) {
+			try {
+				send(dipai.get(j), i);
+				Thread.sleep(150);
+			}catch (Exception e) {}
+		}
+		dipai.clear();
+	}
+	
+	protected void sendEachCards(ArrayList<Byte> cards) {
+        sendEachClient((byte) (CodeUtil.PLAYCOUNT | cards.size()));
+        try{
+            Thread.sleep(100);
+        }catch (Exception e){}
+        for (byte card : cards){
+            sendEachClient(card);
+            try{
+                Thread.sleep(50);
+            }catch (Exception e){}
+        }
 	}
 
 	protected void sendEachClient(byte instruct) {
@@ -260,6 +390,10 @@ public class Room {
 			Log.d(TAG, "write msg exception");
 			e.printStackTrace();
 		}
+	}
+
+	private enum GAMESTATE {
+		DEAL, MAIPAI, PLAY
 	}
 
 }
