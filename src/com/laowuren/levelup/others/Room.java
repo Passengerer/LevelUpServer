@@ -3,6 +3,7 @@ package com.laowuren.levelup.others;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.security.KeyStore.PrivateKeyEntry;
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -20,6 +21,7 @@ public class Room {
 	private GAMESTATE stat = GAMESTATE.DEAL;
 	private CardComparator cardComparator = new CardComparator();
 	private CodeComparator codeComparator = new CodeComparator();
+	private PlayRuler ruler;
 
 	private Object bizhuangLock = new Object();
 	private Object maipaiLock = new Object();
@@ -28,6 +30,7 @@ public class Room {
 
 	private ArrayList<Byte> dipai;
 	private ArrayList<Byte>[] playCards;
+	private ArrayList<Byte>[] handCards;
 
 	private Deck deck;
 	private byte[] ranks;
@@ -43,6 +46,7 @@ public class Room {
 	private int maipairenID;
 	private int zhuangjia = -1;
 	private int turn = -1;
+	private int firstPlayerId = -1;
 	private int showSuitPlayer = -1;
 	private int bufanCount = 0;
 	private int playCardsCount;
@@ -62,6 +66,7 @@ public class Room {
 		outs[0] = out;
 		count = 1;
 		deck = new Deck();
+		ruler = new PlayRuler();
 		deck.shuffle();
 		dipai = new ArrayList<>();
 		ranks = new byte[2];
@@ -82,6 +87,17 @@ public class Room {
 					outs[i].close();
 				}
 			} catch (Exception e) {
+			}
+		}
+	}
+	
+	protected void removeCards(ArrayList<Byte> handCards, ArrayList<Byte> playCards) {
+		for (byte p : playCards) {
+			for (int i = 0; i < handCards.size(); ++i) {
+				if (handCards.get(i) == p) {
+					handCards.remove(i);
+					break;
+				}
 			}
 		}
 	}
@@ -147,7 +163,7 @@ public class Room {
 				if (stat == GAMESTATE.MAIPAI) {
 					maipairenID = playerId;
 					sendEachClient((byte) (CodeUtil.MAIPAITURN | (maipairenID << 2 | turn)));
-					sendDipaiTo(playerId);
+					sendCardsTo(playerId, dipai);
 				}
 				return;
 			}
@@ -165,7 +181,7 @@ public class Room {
 			if (stat == GAMESTATE.MAIPAI) {
 				maipairenID = playerId;
 				sendEachClient((byte) (CodeUtil.MAIPAITURN | (maipairenID << 2 | turn)));
-				sendDipaiTo(playerId);
+				sendCardsTo(playerId, dipai);
 			}
 			return;
 		}
@@ -177,10 +193,46 @@ public class Room {
 		if (stat == GAMESTATE.PLAY) {
 			playCards[playerId].add(code);
 			if (playCards[playerId].size() == playCardsCount) {
+				Log.d("playerId", "" + playerId);
+				Log.d("firstPlayerId", "" + firstPlayerId);
+				Log.d("play", "" + playCards[playerId]);
 				playCards[playerId].sort(codeComparator);
 				sendEachCards(playCards[playerId]);
-				synchronized (playLock) {
-					playLock.notify();
+				if (playerId == firstPlayerId && 
+						ruler.getType(playCards[playerId]) == PlayRuler.SHUAI) {
+					Log.d("shuaipai", "true");
+					ArrayList<Byte> tuihuiCards = ruler.checkShuai(playCards[playerId],
+							handCards[(playerId + 1) % 4], handCards[(playerId + 2) % 4], 
+							handCards[(playerId + 3) % 4]);
+					if (tuihuiCards == null) {
+						// 甩牌成功
+						Log.d("shuai pai", "success");
+						synchronized (playLock) {
+							playLock.notify();
+						}
+					}else {
+						// 甩牌失败,等待几秒,退回部分牌
+						Log.d("shuai pai", "failed");
+						try {
+							Thread.sleep(4000);
+						}catch (Exception e) {}
+						sendEachClient(CodeUtil.SHUAIFAIL);
+						for (byte b : tuihuiCards) {
+							playCards[playerId].remove((Object)b);
+						}
+						sendEachCards(playCards[playerId]);
+						sendCardsTo(playerId, tuihuiCards);
+						removeCards(handCards[playerId], playCards[playerId]);
+						synchronized (playLock) {
+							playLock.notify();
+						}
+					}
+				}else {
+					Log.d("shuaipai", "false");
+					removeCards(handCards[playerId], playCards[playerId]);
+					synchronized (playLock) {
+						playLock.notify();
+					}
 				}
 			}
 		}
@@ -191,6 +243,7 @@ public class Room {
 				Log.d("receive dipai", dipai.toString());
 				bufanCount = 0;
 				maipairenID = playerId;
+				removeCards(handCards[maipairenID], dipai);
 				canNotify = true;
 			}
 		}
@@ -221,6 +274,11 @@ public class Room {
 				playCards[1] = new ArrayList<Byte>();
 				playCards[2] = new ArrayList<Byte>();
 				playCards[3] = new ArrayList<Byte>();
+				handCards = new ArrayList[4];
+				handCards[0] = new ArrayList<Byte>();
+				handCards[1] = new ArrayList<Byte>();
+				handCards[2] = new ArrayList<Byte>();
+				handCards[3] = new ArrayList<Byte>();
 				play();
 			}
 		}
@@ -267,7 +325,8 @@ public class Room {
 				Log.d("turn " + turn, "" + (byte) (CodeUtil.MAIPAITURN | (maipairenID << 2 | turn)));
 				sendEachClient((byte) (CodeUtil.MAIPAITURN | (maipairenID << 2 | turn)));
 				stat = GAMESTATE.MAIPAI;
-				sendDipaiTo(zhuangjia);
+				sendCardsTo(zhuangjia, dipai);
+				dipai.clear();
 				synchronized (maipaiLock) {
 					while (!EXIT) {
 						try {
@@ -286,6 +345,7 @@ public class Room {
 				setZhuCardAndComparator();
 				// 开始轮流打牌
 				turn = zhuangjia;
+				firstPlayerId = turn;
 				sendEachClient((byte)(CodeUtil.FIRSTPLAY | turn));
 				sendEachClient((byte) (CodeUtil.PLAYTURN | turn));
 				stat = GAMESTATE.PLAY;
@@ -312,7 +372,9 @@ public class Room {
 			for (int i = 0; i < 25; ++i) {
 
 				for (int j = 0; j < 4; ++j) {
-					send(deck.get(i * 4 + j), (j + first) % 4);
+					byte code = deck.get(i * 4 + j);
+					send(code, (j + first) % 4);
+					handCards[(j + first) % 4].add(code);
 					/*if (i < 2)
 						send((byte)0x00, j);
 					else if(i < 4)
@@ -349,17 +411,19 @@ public class Room {
 		zhuCard = new Card(s, r);
 		cardComparator.setZhu(zhuCard);
 		codeComparator.setCardComparator(cardComparator);
+		ruler.setZhu(zhuCard);
+		ruler.setCom(codeComparator);
 	}
 
-	protected void sendDipaiTo(int i) {
-        Log.d("send dipai", dipai.toString());
-		for (int j = 0; j < 8; ++j) {
+	protected void sendCardsTo(int i, ArrayList<Byte> cards) {
+        Log.d("send cards", cards.toString());
+		for (int j = 0; j < cards.size(); ++j) {
 			try {
-				send(dipai.get(j), i);
-				Thread.sleep(150);
+				send(cards.get(j), i);
+				handCards[i].add(cards.get(j));
+				Thread.sleep(100);
 			}catch (Exception e) {}
 		}
-		dipai.clear();
 	}
 	
 	protected void sendEachCards(ArrayList<Byte> cards) {

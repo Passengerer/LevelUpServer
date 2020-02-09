@@ -24,6 +24,7 @@ public class Deck {
 			deck.add((byte) 0x4d); // Joker_black
 			deck.add((byte) 0x4e); // Joker_red
 		}
+		shuffle();
 	}
 
 	public byte get(int index) {
