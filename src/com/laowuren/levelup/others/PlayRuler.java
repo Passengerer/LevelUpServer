@@ -1,7 +1,9 @@
 package com.laowuren.levelup.others;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map.Entry;
 
 import utils.CodeUtil;
 
@@ -115,7 +117,7 @@ public class PlayRuler {
 
 	public ArrayList<Byte> checkShuai(ArrayList<Byte> cards, ArrayList<Byte> p1,
 			ArrayList<Byte> p2, ArrayList<Byte> p3) {
-		/*Log.d("PlayRuler", "checkShuai");
+		Log.d("PlayRuler", "checkShuai");
 		boolean dan;
 		boolean dui;
 		boolean liandui;
@@ -127,7 +129,7 @@ public class PlayRuler {
 		
 		ArrayList<Byte>cardsDan = CardsParser.getDan(cards);
 		ArrayList<Byte>cardsDui = CardsParser.getDui(cards);
-		HashMap<Byte, Integer> cardsLiandui = CardsParser.getLiandui(cards, zhu);
+		LinkedHashMap<Byte, Integer> cardsLiandui = CardsParser.getLiandui(cards, zhu);
 		if (cardsSuit == null) {
 			Log.d("checkShuai", "null");
 			suitP1 = CardsParser.getZhu(p1, zhu.getRank());
@@ -182,9 +184,40 @@ public class PlayRuler {
 		if (cardsLiandui.isEmpty()) {
 			liandui = true;
 		}else {
-			HashMap<Byte, Integer> p1Liandui = CardsParser.getLiandui(suitP1, zhu);
-			if (!suitP1.isEmpty() && !p1Liandui.isEmpty()) {
-				
+			// 获取最后添加的即最小的连对
+			byte min = -1;
+			for (byte b : cardsLiandui.keySet()) {
+				min = b;
+			}
+			
+			if (!suitP1.isEmpty()) {
+				Log.d("suitP1", "not empty");
+				Log.d("suitP1", suitP1.toString());
+				LinkedHashMap<Byte, Integer> p1Liandui = CardsParser.getLiandui(suitP1, zhu);
+				if (!p1Liandui.isEmpty()) {
+					Log.d("p1Liandui", "not empty");
+					Iterator<Entry<Byte, Integer>> iterator = p1Liandui.entrySet().iterator();
+					Entry<Byte, Integer> entry = null;
+					while (iterator.hasNext()) {
+						entry = iterator.next();
+						if (CodeUtil.getCardFromCode(entry.getKey()).getRank().ordinal() > 
+								CodeUtil.getCardFromCode(min).getRank().ordinal() && 
+								entry.getValue() >= cardsLiandui.get(min)) {
+
+							Log.d(">= cardsLiandui", "can't shuaipai");
+							ret.addAll(cards);
+							int index = ret.indexOf(min);
+							ArrayList<Byte> remove = new ArrayList<>();
+							for (int i = 0; i < cardsLiandui.get(min); ++i) {
+								remove.add(ret.get(index + i * 2));
+								remove.add(ret.get(index + i * 2));
+							}
+							removeCards(ret, remove);
+							Log.d("return", ret.toString());
+							return ret;
+						}
+					}
+				}
 			}
 		}
 		if (cardsDui.isEmpty()) {
@@ -196,8 +229,19 @@ public class PlayRuler {
 			dan = true;
 		}else {
 			
-		}*/
+		}
 		return null;
+	}
+	
+	protected void removeCards(ArrayList<Byte> handCards, ArrayList<Byte> playCards) {
+		for (byte p : playCards) {
+			for (int i = 0; i < handCards.size(); ++i) {
+				if (handCards.get(i) == p) {
+					handCards.remove(i);
+					break;
+				}
+			}
+		}
 	}
 	
 	public int getType(ArrayList<Byte> cards) {
@@ -223,7 +267,7 @@ public class PlayRuler {
 			}else {
 				// 不止一对
 				dui.sort(com);
-				HashMap<Byte, Integer> liandui = CardsParser.getLiandui(cards, zhu);
+				LinkedHashMap<Byte, Integer> liandui = CardsParser.getLiandui(cards, zhu);
 				if (liandui == null) {
 					return SHUAI;
 				}else {

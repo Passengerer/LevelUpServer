@@ -197,6 +197,9 @@ public class Room {
 				Log.d("firstPlayerId", "" + firstPlayerId);
 				Log.d("play", "" + playCards[playerId]);
 				playCards[playerId].sort(codeComparator);
+				handCards[(playerId + 1) % 4].sort(codeComparator);
+				handCards[(playerId + 2) % 4].sort(codeComparator);
+				handCards[(playerId + 3) % 4].sort(codeComparator);
 				sendEachCards(playCards[playerId]);
 				if (playerId == firstPlayerId && 
 						ruler.getType(playCards[playerId]) == PlayRuler.SHUAI) {
@@ -373,19 +376,38 @@ public class Room {
 
 				for (int j = 0; j < 4; ++j) {
 					byte code = deck.get(i * 4 + j);
-					send(code, (j + first) % 4);
-					handCards[(j + first) % 4].add(code);
-					/*if (i < 2)
+					/*send(code, (j + first) % 4);
+					handCards[(j + first) % 4].add(code);*/
+					if (i < 1) {
 						send((byte)0x00, j);
-					else if(i < 4)
-						send((byte)0x10, j);
-					else if (i < 6)
-						send((byte)0x20, j);
+						handCards[j].add((byte)0x00);
+					}
+					else if(i < 3) {
+						send((byte)0x02, j);
+						handCards[j].add((byte)0x02);
+					}
+					else if(i < 5) {
+						send((byte)0x03, j);
+						handCards[j].add((byte)0x03);
+					}
+					else if (i < 7) {
+						send((byte)0x04, j);
+						handCards[j].add((byte)0x04);
+					}
+					else if (i < 9) {
+						send((byte)0x05, j);
+						handCards[j].add((byte)0x05);
+					}
 					else {
-						send(deck.get(i * 4 + j), (j + first) % 4);
-					}*/
+						send((byte)0x16, j);
+						handCards[j].add((byte)0x16);
+					}
 				}
 				Thread.sleep(600);
+				Log.d("hand0", handCards[0].toString());
+				Log.d("hand1", handCards[1].toString());
+				Log.d("hand2", handCards[2].toString());
+				Log.d("hand3", handCards[3].toString());
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

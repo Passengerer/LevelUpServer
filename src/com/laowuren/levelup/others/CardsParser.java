@@ -1,7 +1,7 @@
 package com.laowuren.levelup.others;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 import utils.CodeUtil;
 
@@ -27,11 +27,12 @@ public class CardsParser {
 		return dui;
 	}
 	
-	public static HashMap<Byte, Integer> getLiandui(ArrayList<Byte> cards, Card zhu){
+	public static LinkedHashMap<Byte, Integer> getLiandui(ArrayList<Byte> cards, Card zhu){
+		Log.d("CardsParser", "getLiandui");
 		ArrayList<Byte> dui = getDui(cards);
-		HashMap<Byte, Integer> ret = new HashMap<>();
+		LinkedHashMap<Byte, Integer> ret = new LinkedHashMap<>();
 		if (dui == null || dui.size() < 2) {
-			return null;
+			return ret;
 		}
 		byte now;
 		byte next;
@@ -53,6 +54,7 @@ public class CardsParser {
 				length = 1;
 			}
 		}
+		Log.d("liandui", "" + ret.size());
 		return ret;
 	}
 	/**
