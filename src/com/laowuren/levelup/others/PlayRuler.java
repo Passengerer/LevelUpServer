@@ -182,6 +182,7 @@ public class PlayRuler {
 			suitP3 = CardsParser.getSpade(p3, zhu.getRank());
 		}
 		if (cardsLiandui.isEmpty()) {
+			Log.d("liandui", "empty");
 			liandui = true;
 		}else {
 			// 获取最后添加的即最小的连对
@@ -200,8 +201,8 @@ public class PlayRuler {
 					Entry<Byte, Integer> entry = null;
 					while (iterator.hasNext()) {
 						entry = iterator.next();
-						if (CodeUtil.getCardFromCode(entry.getKey()).getRank().ordinal() > 
-								CodeUtil.getCardFromCode(min).getRank().ordinal() && 
+						// codeCom按从小到大排序，< 0表示前者大于后者
+						if (com.compare(entry.getKey(), min) < 0 && 
 								entry.getValue() >= cardsLiandui.get(min)) {
 
 							Log.d(">= cardsLiandui", "can't shuaipai");
@@ -219,16 +220,168 @@ public class PlayRuler {
 					}
 				}
 			}
+			
+			if (!suitP2.isEmpty()) {
+				Log.d("suitP2", "not empty");
+				Log.d("suitP2", suitP2.toString());
+				LinkedHashMap<Byte, Integer> p2Liandui = CardsParser.getLiandui(suitP2, zhu);
+				if (!p2Liandui.isEmpty()) {
+					Log.d("p2Liandui", "not empty");
+					Iterator<Entry<Byte, Integer>> iterator = p2Liandui.entrySet().iterator();
+					Entry<Byte, Integer> entry = null;
+					while (iterator.hasNext()) {
+						entry = iterator.next();
+						if (com.compare(entry.getKey(), min) < 0 && 
+								entry.getValue() >= cardsLiandui.get(min)) {
+
+							Log.d(">= cardsLiandui", "can't shuaipai");
+							ret.addAll(cards);
+							int index = ret.indexOf(min);
+							ArrayList<Byte> remove = new ArrayList<>();
+							for (int i = 0; i < cardsLiandui.get(min); ++i) {
+								remove.add(ret.get(index + i * 2));
+								remove.add(ret.get(index + i * 2));
+							}
+							removeCards(ret, remove);
+							Log.d("return", ret.toString());
+							return ret;
+						}
+					}
+				}
+			}
+			
+			if (!suitP3.isEmpty()) {
+				Log.d("suitP3", "not empty");
+				Log.d("suitP3", suitP3.toString());
+				LinkedHashMap<Byte, Integer> p3Liandui = CardsParser.getLiandui(suitP3, zhu);
+				if (!p3Liandui.isEmpty()) {
+					Log.d("p3Liandui", "not empty");
+					Iterator<Entry<Byte, Integer>> iterator = p3Liandui.entrySet().iterator();
+					Entry<Byte, Integer> entry = null;
+					while (iterator.hasNext()) {
+						entry = iterator.next();
+						if (com.compare(entry.getKey(), min) < 0 && 
+								entry.getValue() >= cardsLiandui.get(min)) {
+
+							Log.d(">= cardsLiandui", "can't shuaipai");
+							ret.addAll(cards);
+							int index = ret.indexOf(min);
+							ArrayList<Byte> remove = new ArrayList<>();
+							for (int i = 0; i < cardsLiandui.get(min); ++i) {
+								remove.add(ret.get(index + i * 2));
+								remove.add(ret.get(index + i * 2));
+							}
+							removeCards(ret, remove);
+							Log.d("return", ret.toString());
+							return ret;
+						}
+					}
+				}
+			}
+			liandui = true;
 		}
 		if (cardsDui.isEmpty()) {
+			Log.d("dui", "empty");
 			dui = true;
 		}else {
+			byte min = cardsDui.get(cardsDui.size() - 1);
+			Log.d("min", "" + min);
 			
+			if (!suitP1.isEmpty()) {
+				Log.d("suitP1", "not empty");
+				ArrayList<Byte> p1Dui = CardsParser.getDui(suitP1);
+				if (!p1Dui.isEmpty()) {
+					Log.d("p1dui", p1Dui.toString());
+					if (com.compare(p1Dui.get(0), min) < 0) {
+						Log.d(">= cardsDui", "can't shuaipai");
+						ret.addAll(cards);
+						ArrayList<Byte> remove = new ArrayList<>();
+						remove.add(min);
+						remove.add(min);
+						removeCards(ret, remove);
+						Log.d("return", ret.toString());
+						return ret;
+					}
+				}
+			}
+			
+			if (!suitP2.isEmpty()) {
+				Log.d("suitP2", "not empty");
+				ArrayList<Byte> p2Dui = CardsParser.getDui(suitP2);
+				if (!p2Dui.isEmpty()) {
+					Log.d("p2dui", p2Dui.toString());
+					if (com.compare(p2Dui.get(0), min) < 0) {
+						Log.d(">= cardsDui", "can't shuaipai");
+						ret.addAll(cards);
+						ArrayList<Byte> remove = new ArrayList<>();
+						remove.add(min);
+						remove.add(min);
+						removeCards(ret, remove);
+						Log.d("return", ret.toString());
+						return ret;
+					}
+				}
+			}
+			
+			if (!suitP3.isEmpty()) {
+				Log.d("suitP3", "not empty");
+				ArrayList<Byte> p3Dui = CardsParser.getDui(suitP3);
+				if (!p3Dui.isEmpty()) {
+					Log.d("p3dui", p3Dui.toString());
+					if (com.compare(p3Dui.get(0), min) < 0) {
+						Log.d(">= cardsDui", "can't shuaipai");
+						ret.addAll(cards);
+						ArrayList<Byte> remove = new ArrayList<>();
+						remove.add(min);
+						remove.add(min);
+						removeCards(ret, remove);
+						Log.d("return", ret.toString());
+						return ret;
+					}
+				}
+			}
+			dui = true;
 		}
 		if (cardsDan.isEmpty()) {
+			Log.d("dan", "empty");
 			dan = true;
 		}else {
+			byte min = cardsDan.get(cardsDan.size() - 1);
+			Log.d("min", "" + min);
 			
+			if (!suitP1.isEmpty()) {
+				Log.d("suitP1", "not empty");
+				// 有大于甩牌中最小牌即可
+				if (com.compare(suitP1.get(0), min) < 0) {
+					Log.d(">= cardsDui", "can't shuaipai");
+					ret.addAll(cards);
+					ret.remove(ret.size() - 1);
+					return ret;
+				}
+			}
+			
+			if (!suitP2.isEmpty()) {
+				Log.d("suitP2", "not empty");
+				// 有大于甩牌中最小牌即可
+				if (com.compare(suitP2.get(0), min) < 0) {
+					Log.d(">= cardsDui", "can't shuaipai");
+					ret.addAll(cards);
+					ret.remove(ret.size() - 1);
+					return ret;
+				}
+			}
+			
+			if (!suitP3.isEmpty()) {
+				Log.d("suitP3", "not empty");
+				// 有大于甩牌中最小牌即可
+				if (com.compare(suitP3.get(0), min) < 0) {
+					Log.d(">= cardsDui", "can't shuaipai");
+					ret.addAll(cards);
+					ret.remove(ret.size() - 1);
+					return ret;
+				}
+			}
+			dan = true;
 		}
 		return null;
 	}

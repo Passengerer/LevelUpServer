@@ -10,6 +10,7 @@ public class CardsParser {
 	public static ArrayList<Byte> getDan(ArrayList<Byte> cards){
 		ArrayList<Byte> dan = new ArrayList<>();
 		ArrayList<Byte> dui = getDui(cards);
+		dan.addAll(cards);
 		dan.removeAll(dui);
 		return dan;
 	}

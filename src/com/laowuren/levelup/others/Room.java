@@ -197,13 +197,13 @@ public class Room {
 				Log.d("firstPlayerId", "" + firstPlayerId);
 				Log.d("play", "" + playCards[playerId]);
 				playCards[playerId].sort(codeComparator);
-				handCards[(playerId + 1) % 4].sort(codeComparator);
-				handCards[(playerId + 2) % 4].sort(codeComparator);
-				handCards[(playerId + 3) % 4].sort(codeComparator);
 				sendEachCards(playCards[playerId]);
 				if (playerId == firstPlayerId && 
 						ruler.getType(playCards[playerId]) == PlayRuler.SHUAI) {
 					Log.d("shuaipai", "true");
+					handCards[(playerId + 1) % 4].sort(codeComparator);
+					handCards[(playerId + 2) % 4].sort(codeComparator);
+					handCards[(playerId + 3) % 4].sort(codeComparator);
 					ArrayList<Byte> tuihuiCards = ruler.checkShuai(playCards[playerId],
 							handCards[(playerId + 1) % 4], handCards[(playerId + 2) % 4], 
 							handCards[(playerId + 3) % 4]);
