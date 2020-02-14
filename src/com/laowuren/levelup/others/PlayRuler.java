@@ -28,8 +28,16 @@ public class PlayRuler {
 		this.com = com;
 	}
 	
+	public CodeComparator getCom() {
+		return com;
+	}
+	
 	public void setZhu(Card card) {
 		this.zhu = card;
+	}
+	
+	public Card getZhu() {
+		return zhu;
 	}
 	
 	/**
@@ -396,6 +404,16 @@ public class PlayRuler {
 			}
 		}
 	}
+
+    public boolean checkYingZhu(Card card){
+        Rank rank = card.getRank();
+        if (rank == Rank.Joker_red || rank == Rank.Joker_black ||
+                rank == Rank.Deuce || rank == zhu.getRank()){
+            return true;
+        }else{
+            return false;
+        }
+    }
 	
 	public int getType(ArrayList<Byte> cards) {
 		// 只有1张牌

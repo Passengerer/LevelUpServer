@@ -14,6 +14,9 @@ public class CodeComparator implements Comparator<Byte> {
 		this.com = com;
 	}
 
+	/**
+	 * 返回o2 - o1
+	 */
 	@Override
 	public int compare(Byte o1, Byte o2) {
 		Card c1 = CodeUtil.getCardFromCode(o1);

@@ -16,13 +16,16 @@ public class CodeUtil {
     public final static byte FAILED2 = (byte)0xf3;	// 房间人数已满
     public final static byte FAILED3 = (byte)0xf4;	// 错误请求
     public final static byte SUCCESS = (byte)0xf5;	// 请求成功
-    public final static byte EXIT = (byte)0xff;
+    public final static byte EXIT = (byte)0xfe;
     public final static byte BUFAN = (byte)0xf7;
     public final static byte SHUAIFAIL = (byte)0xf8;
+    public final static byte HEARTBEAT = (byte)0xf9;	// 发送心跳信息
+    public final static byte GAMEOVER = (byte)0xfa;	// 游戏结束
+    public final static byte GAMESTART = (byte)0xfb;	// 游戏开始
     
-    public final static byte ROOMID = (byte)0x60;		// 房间id 0110 00 00 后4位中前两位表示房间号，后两位表示玩家id
+    public final static byte ROOMID = (byte)0x60;		// 房间id 0110 00 00 后4位中前两位表示房间号，后两位表示玩家id, 初始化阶段表示庄家id
     public final static byte ZHUSUIT = (byte)0xd0;	//  主牌花色 1101 0000 后4位表示花色，4-小王，5-大王
-    public final static byte FANSUIT = (byte)0xc0;	//  反牌花色 1100 0000 后4位表示花色，4-小王，5-大王
+    public final static byte FANSUIT = (byte)0xc0;	//  反牌花色 1100 0000 后4位表示花色，4-小王，5-大王，初始化阶段表示当前等级, 打牌阶段用来表示得分
     public final static byte DINGSUIT = (byte)0xb0;	//  定牌花色 1011 0000 后4位表示花色
     public final static byte FANWANG = (byte)0xa0;	//  用王反 1010 0000 后4位表示大小王，0-小王，1大王
     public final static byte BIZHUANG = (byte)0x90;	// 	逼庄
