@@ -136,7 +136,7 @@ public class PlayRuler {
 		ArrayList<Byte> suitP3 = null;
 		
 		ArrayList<Byte>cardsDan = CardsParser.getDan(cards);
-		ArrayList<Byte>cardsDui = CardsParser.getDui(cards);
+		ArrayList<Byte>cardsDui = CardsParser.getDuiExceptLiandui(cards, zhu);
 		LinkedHashMap<Byte, Integer> cardsLiandui = CardsParser.getLiandui(cards, zhu);
 		if (cardsSuit == null) {
 			Log.d("checkShuai", "null");

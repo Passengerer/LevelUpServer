@@ -28,6 +28,21 @@ public class CardsParser {
 		return dui;
 	}
 	
+	public static ArrayList<Byte> getDuiExceptLiandui(ArrayList<Byte> cards, Card zhu){
+		ArrayList<Byte> dui = getDui(cards);
+		LinkedHashMap<Byte, Integer> liandui = getLiandui(cards, zhu);
+		ArrayList<Byte> removeArr = new ArrayList<>();
+		for (byte b : liandui.keySet()) {
+			int length =  liandui.get(b);
+			int removeIndex = dui.indexOf(b);
+			for (int i = 0; i < length; ++i) {
+				removeArr.add(dui.get(removeIndex + i));
+			}
+		}
+		dui.removeAll(removeArr);
+		return dui;
+	}
+	
 	public static LinkedHashMap<Byte, Integer> getLiandui(ArrayList<Byte> cards, Card zhu){
 		Log.d("CardsParser", "getLiandui");
 		ArrayList<Byte> dui = getDui(cards);
@@ -102,8 +117,12 @@ public class CardsParser {
 				// 没有花色，没有下一级
 				return false;
 			}else {
-				// 有花色，下一级是主花色的A(如果A不是当前等级)
 				Card card2 = CodeUtil.getCardFromCode(code2);
+				// 有花色，card1是正2，下一级是副2
+				if (CodeUtil.getCardFromCode(code1).getSuit() == zhuSuit) {
+					return card2.getSuit() != zhuSuit && card2.getRank() == Rank.Deuce;
+				}
+				// 有花色，card1是副2，下一级是主花色的A(如果A不是当前等级)
 				// 对于已排序的code1和code2，code1 > code2，故code2不可能是当前等级
 				if (zhuRank != Rank.Ace) {
 					// A不是当前等级
@@ -137,9 +156,7 @@ public class CardsParser {
 		for (byte b : cards) {
 			card = CodeUtil.getCardFromCode(b);
 			rank = card.getRank();
-			if (card.getSuit() == Suit.Heart && rank != Rank.Deuce &&
-					rank != Rank.Joker_black && rank != Rank.Joker_red && 
-					rank != level) {
+			if (card.getSuit() == Suit.Heart && rank != Rank.Deuce && rank != level) {
 				heart.add(b);
 			}
 		}
@@ -153,9 +170,7 @@ public class CardsParser {
 		for (byte b : cards) {
 			card = CodeUtil.getCardFromCode(b);
 			rank = card.getRank();
-			if (card.getSuit() == Suit.Club && rank != Rank.Deuce &&
-					rank != Rank.Joker_black && rank != Rank.Joker_red && 
-					rank != level) {
+			if (card.getSuit() == Suit.Club && rank != Rank.Deuce && rank != level) {
 				club.add(b);
 			}
 		}
@@ -169,9 +184,7 @@ public class CardsParser {
 		for (byte b : cards) {
 			card = CodeUtil.getCardFromCode(b);
 			rank = card.getRank();
-			if (card.getSuit() == Suit.Diamond && rank != Rank.Deuce &&
-					rank != Rank.Joker_black && rank != Rank.Joker_red && 
-					rank != level) {
+			if (card.getSuit() == Suit.Diamond && rank != Rank.Deuce && rank != level) {
 				diamond.add(b);
 			}
 		}
@@ -185,9 +198,7 @@ public class CardsParser {
 		for (byte b : cards) {
 			card = CodeUtil.getCardFromCode(b);
 			rank = card.getRank();
-			if (card.getSuit() == Suit.Spade && rank != Rank.Deuce &&
-					rank != Rank.Joker_black && rank != Rank.Joker_red && 
-					rank != level) {
+			if (card.getSuit() == Suit.Spade && rank != Rank.Deuce && rank != level) {
 				spade.add(b);
 			}
 		}

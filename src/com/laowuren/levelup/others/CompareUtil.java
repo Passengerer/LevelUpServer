@@ -91,24 +91,26 @@ public class CompareUtil {
 		ArrayList<Byte> c1Dui = CardsParser.getDui(c1);
 		if (!c1Dui.isEmpty()) {
 			ArrayList<Byte> c2Dui = CardsParser.getDui(c2);
-			for (int i = 0; i < c1Dui.size(); ++i) {
+			/*for (int i = 0; i < c1Dui.size(); ++i) {
 				if (ruler.getCom().compare(c2Dui.get(i), c1Dui.get(i)) != 0) {
 					return ruler.getCom().compare(c2Dui.get(i), c1Dui.get(i)) >= 0;
 				}
-			}
+			}*/
+			// 只比较最大的一对
+			return ruler.getCom().compare(c2Dui.get(0), c1Dui.get(0)) >= 0;
 		}
-		// 前面都未比较出结果，比较剩下的单牌
-		ArrayList<Byte> c1Dan = CardsParser.getDan(c1);
+		// 前面都未比较出结果，比较剩下的牌
+		/*ArrayList<Byte> c1Dan = CardsParser.getDan(c1);
 		if (!c1Dan.isEmpty()) {
-			ArrayList<Byte> c2Dan = CardsParser.getDan(c2);
-			for (int i = 0; i < c1Dan.size(); ++i) {
-				if (ruler.getCom().compare(c2Dan.get(i), c1Dan.get(i)) != 0) {
-					return ruler.getCom().compare(c2Dan.get(i), c1Dan.get(i)) >= 0;
+			ArrayList<Byte> c2Dan = CardsParser.getDan(c2);*/
+			/*for (int i = 0; i < c1.size(); ++i) {
+				if (ruler.getCom().compare(c2.get(i), c1.get(i)) != 0) {
+					return ruler.getCom().compare(c2.get(i), c1.get(i)) >= 0;
 				}
-			}
-		}
+			}*/
+		//}
 		// c1等于c2，返回true
-		return true;
+		return ruler.getCom().compare(c2.get(0), c1.get(0)) >= 0;
 	}
 	
 	// 判断牌型是否符合首家牌型

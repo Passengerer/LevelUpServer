@@ -43,6 +43,17 @@ public class Deck {
 		}
 		deck = newDeck;*/
 		Collections.shuffle(deck);
+		List<Byte> newDeck = new ArrayList<>();
+		for (int i = 60; i < deck.size(); ++i) {
+			newDeck.add(deck.get(i));
+		}
+		for (int i = 30; i < 60; ++i) {
+			newDeck.add(deck.get(i));
+		}
+		for (int i = 0; i < 30; ++i) {
+			newDeck.add(deck.get(i));
+		}
+		deck = newDeck;
 	}
 	
 	public void printAll() {

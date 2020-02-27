@@ -13,6 +13,7 @@ public class ListenThread extends Thread {
 	private int roomId;
 	private int playerId;
 	private InputStream in;
+	private boolean stop = false;
 
 	public ListenThread(int roomId, int playerId, InputStream in) {
 		this.roomId = roomId;
@@ -22,19 +23,16 @@ public class ListenThread extends Thread {
 
 			@Override
 			public void run() {
-				while (true) {
+				while (!stop) {
 					try {
-						Thread.sleep(10000);
+						Thread.sleep(5000);
 						Log.d(TAG, "heart beat");
 						GameServer.Rooms.get(roomId).send(CodeUtil.HEARTBEAT, playerId);
 					} catch (IOException e) {
-						Log.d(TAG, "io exception");
-						GameServer.Rooms.get(roomId).destroy();
-						break;
 					} catch (InterruptedException e) {
 					}
 				}
-
+				Log.d(TAG, "sending over");
 			}
 		}).start();
 	}
@@ -51,6 +49,7 @@ public class ListenThread extends Thread {
 					GameServer.Rooms.get(roomId).handle(b, playerId);
 				}
 			} catch (Exception e) {
+				Log.d(TAG, "read exception");
 				e.printStackTrace();
 				try {
 					if (in != null) {
@@ -61,6 +60,8 @@ public class ListenThread extends Thread {
 				}
 			}
 		}
+		stop = true;
+		Log.d(TAG, "listenning over");
 	}
 
 }
